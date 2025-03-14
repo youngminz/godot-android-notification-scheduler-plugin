@@ -21,7 +21,7 @@ data class NotificationData(
     /** Interval in seconds between each repeating notification */
     val interval: Int?,
     /** If enabled, app will be restarted when notification is opened */
-    val restartApp: Boolean?
+    val restartApp: Boolean
 ) {
     companion object {
         const val DATA_KEY_ID: String = "notification_id"
@@ -41,9 +41,9 @@ data class NotificationData(
             val content = data[DATA_KEY_CONTENT] as String
             val smallIconName = data[DATA_KEY_SMALL_ICON_NAME] as String
             val delay = data[DATA_KEY_DELAY] as Int
-            val deeplink = data[DATA_KEY_DEEPLINK] as String?
-            val interval = data[DATA_KEY_INTERVAL] as Int?
-            val restartApp = data[OPTION_KEY_RESTART_APP] as? Boolean
+            val deeplink = data[DATA_KEY_DEEPLINK] as? String
+            val interval = data[DATA_KEY_INTERVAL] as? Int
+            val restartApp = data[OPTION_KEY_RESTART_APP] as? Boolean ?: false
 
             return NotificationData(id, channelId, title, content, smallIconName, delay, deeplink, interval, restartApp)
         }
@@ -57,7 +57,7 @@ data class NotificationData(
             val delay = intent.getIntExtra(DATA_KEY_DELAY, -1)
             val deeplink = intent.getStringExtra(DATA_KEY_DEEPLINK)
             val interval = intent.getIntExtra(DATA_KEY_INTERVAL, -1)
-            val restartApp = intent.getBooleanExtra(OPTION_KEY_RESTART_APP, true)
+            val restartApp = intent.getBooleanExtra(OPTION_KEY_RESTART_APP, false)
 
             return NotificationData(id, channelId, title, content, smallIconName, delay, deeplink, interval, restartApp)
         }
@@ -70,8 +70,10 @@ data class NotificationData(
             putExtra(DATA_KEY_TITLE, title)
             putExtra(DATA_KEY_CONTENT, content)
             putExtra(DATA_KEY_SMALL_ICON_NAME, smallIconName)
+            putExtra(DATA_KEY_DELAY, delay)
             deeplink?.let { putExtra(DATA_KEY_DEEPLINK, it) }
-            restartApp?.let { putExtra(OPTION_KEY_RESTART_APP, it) }
+            interval?.let { putExtra(DATA_KEY_INTERVAL, it) }
+            putExtra(OPTION_KEY_RESTART_APP, restartApp)
         }
     }
 }
