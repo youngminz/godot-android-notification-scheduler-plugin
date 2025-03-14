@@ -36,7 +36,6 @@ class ResultActivity : AppCompatActivity() {
 
         val pluginInstance = NotificationSchedulerPlugin.instance
         if (pluginInstance != null && notificationData.id != -1) {
-            Log.e(LOG_TAG, "Handling notification opened. Plugin instance: $pluginInstance, notification ID: ${notificationData.id}")
             // TODO: Handle in Godot app (check data on app resume/restart)
             pluginInstance.handleNotificationOpened(notificationData.id)
         } else {
