@@ -29,14 +29,14 @@ class NotificationReceiver : BroadcastReceiver() {
         }
 
         val notificationData = NotificationData.from(intent)
-        val notificationActionIntent = Intent(context, ResultActivity::class.java).apply {
+        val notificationClickIntent = Intent(context, ResultActivity::class.java).apply {
             putExtras(intent)
             setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_HISTORY)
         }
-        val onCancelIntent = Intent(context, CancelNotificationReceiver::class.java).apply {
+        val notificationDismissIntent = Intent(context, CancelNotificationReceiver::class.java).apply {
             putExtras(intent)
         }
-        val onDismissPendingIntent = PendingIntent.getBroadcast(context, 0, onCancelIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val dismissPendingIntent = PendingIntent.getBroadcast(context, 0, notificationDismissIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
         Log.i(LOG_TAG, "onReceive():: received notification id:'${notificationData.id}' - channel id:${notificationData.channelId} - title:'${notificationData.title}' - content:'${notificationData.content}' - small icon name:'${notificationData.smallIconName}")
 
@@ -45,7 +45,7 @@ class NotificationReceiver : BroadcastReceiver() {
             return
         }
 
-        val pendingIntent = PendingIntent.getActivity(context, 0, notificationActionIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val clickPendingIntent = PendingIntent.getActivity(context, 0, notificationClickIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
         val notificationBuilder = NotificationCompat.Builder(context, notificationData.channelId)
             .setSmallIcon(
@@ -65,8 +65,8 @@ class NotificationReceiver : BroadcastReceiver() {
             .setContentText(notificationData.content)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT) // TODO: This seems suspicious
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setContentIntent(pendingIntent)
-            .setDeleteIntent(onDismissPendingIntent)
+            .setContentIntent(clickPendingIntent)
+            .setDeleteIntent(dismissPendingIntent)
             .setAutoCancel(true)
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
