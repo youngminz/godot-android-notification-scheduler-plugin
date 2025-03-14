@@ -20,71 +20,38 @@ import org.godotengine.plugin.android.notification.model.NotificationData
 class NotificationReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent == null) {
-            Log.e(
-                LOG_TAG, String.format(
-                    "%s():: Received intent is null. Unable to generate notification.",
-                    "onReceive"
-                )
-            )
-        } else if (intent.hasExtra(NotificationData.Companion.DATA_KEY_ID)) {
-            val notificationId = intent.getIntExtra(NotificationData.Companion.DATA_KEY_ID, 0)
-            val channelId = intent.getStringExtra(NotificationData.Companion.DATA_KEY_CHANNEL_ID)
-            val title = intent.getStringExtra(NotificationData.Companion.DATA_KEY_TITLE)
-            val content = intent.getStringExtra(NotificationData.Companion.DATA_KEY_CONTENT)
-            val smallIconName =
-                intent.getStringExtra(NotificationData.Companion.DATA_KEY_SMALL_ICON_NAME)
+            Log.e(LOG_TAG, "onReceive():: Received intent is null. Unable to generate notification.")
+            return
+        }
 
-            val notificationActionIntent = Intent(
-                context,
-                ResultActivity::class.java
-            )
-            notificationActionIntent.putExtra(
-                NotificationData.Companion.DATA_KEY_ID,
-                notificationId
-            )
+        if (intent.hasExtra(NotificationData.DATA_KEY_ID)) {
+            val notificationId = intent.getIntExtra(NotificationData.DATA_KEY_ID, 0)
+            val channelId = intent.getStringExtra(NotificationData.DATA_KEY_CHANNEL_ID)
+            val title = intent.getStringExtra(NotificationData.DATA_KEY_TITLE)
+            val content = intent.getStringExtra(NotificationData.DATA_KEY_CONTENT)
+            val smallIconName = intent.getStringExtra(NotificationData.DATA_KEY_SMALL_ICON_NAME)
 
-            if (intent.hasExtra(NotificationData.Companion.DATA_KEY_DEEPLINK)) {
-                notificationActionIntent.putExtra(
-                    NotificationData.Companion.DATA_KEY_DEEPLINK,
-                    intent.getStringExtra(NotificationData.Companion.DATA_KEY_DEEPLINK)
-                )
+            val notificationActionIntent = Intent(context, ResultActivity::class.java)
+            notificationActionIntent.putExtra(NotificationData.DATA_KEY_ID, notificationId)
+
+            if (intent.hasExtra(NotificationData.DATA_KEY_DEEPLINK)) {
+                notificationActionIntent.putExtra(NotificationData.DATA_KEY_DEEPLINK, intent.getStringExtra(NotificationData.DATA_KEY_DEEPLINK))
             }
 
-            if (intent.hasExtra(NotificationData.Companion.OPTION_KEY_RESTART_APP)) {
-                notificationActionIntent.putExtra(
-                    NotificationData.Companion.OPTION_KEY_RESTART_APP,
-                    true
-                )
+            if (intent.hasExtra(NotificationData.OPTION_KEY_RESTART_APP)) {
+                notificationActionIntent.putExtra(NotificationData.OPTION_KEY_RESTART_APP, true)
             }
 
             notificationActionIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_HISTORY)
 
-            val onCancelIntent = Intent(
-                context,
-                CancelNotificationReceiver::class.java
-            )
-            onCancelIntent.putExtra(NotificationData.Companion.DATA_KEY_ID, notificationId)
-            val onDismissPendingIntent = PendingIntent.getBroadcast(
-                context,
-                0,
-                onCancelIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
+            val onCancelIntent = Intent(context, CancelNotificationReceiver::class.java)
+            onCancelIntent.putExtra(NotificationData.DATA_KEY_ID, notificationId)
+            val onDismissPendingIntent = PendingIntent.getBroadcast(context, 0, onCancelIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
-            Log.i(
-                LOG_TAG, String.format(
-                    "%s():: received notification id:'%d' - channel id:%s - title:'%s' - content:'%s' - small icon name:'%s",
-                    "onReceive", notificationId, channelId, title, content, smallIconName
-                )
-            )
+            Log.i(LOG_TAG, "onReceive():: received notification id:'${notificationId}' - channel id:${channelId} - title:'${title}' - content:'${content}' - small icon name:'${smallIconName}")
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val pendingIntent = PendingIntent.getActivity(
-                    context,
-                    0,
-                    notificationActionIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
+                val pendingIntent = PendingIntent.getActivity(context, 0, notificationActionIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
                 val resources = context.resources
                 @SuppressLint("DiscouragedApi") val notificationBuilder =
@@ -113,41 +80,23 @@ class NotificationReceiver : BroadcastReceiver() {
                         .setAutoCancel(true)
 
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                    ActivityCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.POST_NOTIFICATIONS
-                    ) == PackageManager.PERMISSION_GRANTED
+                    ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
                 ) {
                     val notification = notificationBuilder.build()
                     NotificationManagerCompat.from(context).notify(notificationId, notification)
                 } else {
-                    Log.w(
-                        LOG_TAG, String.format(
-                            "%s():: unable to process notification as %s permission is not granted",
-                            "onReceive", Manifest.permission.POST_NOTIFICATIONS
-                        )
-                    )
+                    Log.w(LOG_TAG, "onReceive():: unable to process notification as ${Manifest.permission.POST_NOTIFICATIONS} permission is not granted")
                 }
             } else {
-                Log.w(
-                    LOG_TAG, String.format(
-                        "%s():: unable to process notification as current SDK is %d and required SDK is %d",
-                        "onReceive", Build.VERSION.SDK_INT, Build.VERSION_CODES.M
-                    )
-                )
+                Log.w(LOG_TAG, "onReceive():: unable to process notification as current SDK is ${Build.VERSION.SDK_INT} and required SDK is ${Build.VERSION_CODES.M}")
             }
         } else {
-            Log.e(
-                LOG_TAG, String.format(
-                    "%s():: %s extra not found in intent. Unable to generate notification.",
-                    "onReceive", NotificationData.Companion.DATA_KEY_ID
-                )
-            )
+            Log.e(LOG_TAG, "onReceive():: ${NotificationData.DATA_KEY_ID} extra not found in intent. Unable to generate notification.")
         }
     }
 
     companion object {
-        private val LOG_TAG = "godot::" + NotificationReceiver::class.java.simpleName
+        private val LOG_TAG = "godot::${NotificationReceiver::class.java.simpleName}"
 
         private const val ICON_RESOURCE_TYPE = "drawable"
     }

@@ -12,34 +12,20 @@ import org.godotengine.plugin.android.notification.model.NotificationData
 class CancelNotificationReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent == null) {
-            Log.e(
-                LOG_TAG, String.format(
-                    "%s():: Received intent is null. Unable to generate notification.",
-                    "onReceive"
-                )
-            )
-        } else if (intent.hasExtra(NotificationData.Companion.DATA_KEY_ID)) {
-            val notificationId = intent.getIntExtra(NotificationData.Companion.DATA_KEY_ID, 0)
-            if (NotificationSchedulerPlugin.Companion.instance == null) {
-                Log.e(LOG_TAG, String.format("%s():: Plugin instance not found!.", "onReceive"))
+            Log.e(LOG_TAG, "onReceive():: Received intent is null. Unable to generate notification.")
+        } else if (intent.hasExtra(NotificationData.DATA_KEY_ID)) {
+            val notificationId = intent.getIntExtra(NotificationData.DATA_KEY_ID, 0)
+            if (NotificationSchedulerPlugin.instance == null) {
+                Log.e(LOG_TAG, "onReceive():: Plugin instance not found!.")
             } else {
-                NotificationSchedulerPlugin.Companion.instance.handleNotificationDismissed(
-                    notificationId
-                )
+                NotificationSchedulerPlugin.instance!!.handleNotificationDismissed(notificationId)
             }
         } else {
-            Log.e(
-                LOG_TAG, String.format(
-                    "%s():: %s extra not found in intent. Unable to generate notification.",
-                    "onReceive", NotificationData.Companion.DATA_KEY_ID
-                )
-            )
+            Log.e(LOG_TAG, "onReceive():: ${NotificationData.DATA_KEY_ID} extra not found in intent. Unable to generate notification.")
         }
     }
 
     companion object {
         private val LOG_TAG = "godot::" + CancelNotificationReceiver::class.java.simpleName
-
-        private const val ICON_RESOURCE_TYPE = "drawable"
     }
 }

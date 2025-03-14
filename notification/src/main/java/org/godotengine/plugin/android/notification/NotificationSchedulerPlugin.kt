@@ -31,8 +31,6 @@ import org.godotengine.plugin.android.notification.model.ChannelData
 import org.godotengine.plugin.android.notification.model.NotificationData
 
 class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
-    private var activity: Activity? = null
-
     /**
      * Creates a notification channel with given ID. If a channel already exists with the given ID,
      * then the call will be ignored.
@@ -42,28 +40,25 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
     @RequiresApi(api = Build.VERSION_CODES.O)
     @UsedByGodot
     fun create_notification_channel(data: Dictionary) {
-        val channelData = ChannelData(data)
-        if (channelData.isValid) {
-            val channel = NotificationChannel(
-                channelData.id, channelData.name,
-                channelData.importance
-            )
-            channel.description = channelData.description
-            val manager =
-                activity!!.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
-            Log.d(
-                LOG_TAG, String.format(
-                    "%s():: channel id: %s, name: %s, description: %s",
-                    "create_notification_channel",
-                    channelData.id,
-                    channelData.name,
-                    channelData.description
-                )
-            )
-        } else {
-            Log.e(LOG_TAG, "create_notification_channel(): invalid channel data object")
+        val activity = activity ?: return
+
+        val channelData = try {
+            ChannelData.from(data = data)
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, "create_notification_channel(): invalid channel data object", e)
+            return
         }
+
+        val channel = NotificationChannel(
+            /* id = */ channelData.id,
+            /* name = */ channelData.name,
+            /* importance = */ channelData.importance,
+        ).apply {
+            description = channelData.description
+        }
+        val manager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.createNotificationChannel(channel)
+        Log.d(LOG_TAG, "create_notification_channel():: channel id: ${channelData.id}, name: ${channelData.name}, description: ${channelData.description}")
     }
 
     /**
@@ -75,50 +70,31 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
     @RequiresApi(api = Build.VERSION_CODES.N)
     @UsedByGodot
     fun schedule(data: Dictionary) {
-        val notificationData = NotificationData(data)
-        if (notificationData.isValid) {
-            val notificationId = notificationData.id
+        val activity = activity ?: return
 
-            val intent = Intent(
-                activity!!.applicationContext,
-                NotificationReceiver::class.java
+        val notificationData = try {
+            NotificationData.from(data)
+        } catch (e: Exception) {
+            Log.e(LOG_TAG, "schedule(): invalid notification data object", e)
+            return
+        }
+
+        val intent = notificationData.toIntent(activity.applicationContext)
+        if (notificationData.interval != null) {
+            scheduleRepeatingNotification(
+                activity = activity,
+                notificationId = notificationData.id,
+                intent = intent,
+                delaySeconds = notificationData.delay,
+                intervalSeconds = notificationData.interval,
             )
-            intent.putExtra(NotificationData.Companion.DATA_KEY_ID, notificationId)
-            intent.putExtra(
-                NotificationData.Companion.DATA_KEY_CHANNEL_ID,
-                notificationData.channelId
-            )
-            intent.putExtra(NotificationData.Companion.DATA_KEY_TITLE, notificationData.title)
-            intent.putExtra(NotificationData.Companion.DATA_KEY_CONTENT, notificationData.content)
-            intent.putExtra(
-                NotificationData.Companion.DATA_KEY_SMALL_ICON_NAME,
-                notificationData.smallIconName
-            )
-
-            if (notificationData.hasDeeplink()) {
-                intent.putExtra(
-                    NotificationData.Companion.DATA_KEY_DEEPLINK,
-                    notificationData.deeplink
-                )
-            }
-
-            if (notificationData.hasRestartAppOption()) {
-                intent.putExtra(NotificationData.Companion.OPTION_KEY_RESTART_APP, true)
-            }
-
-            if (notificationData.hasInterval()) {
-                scheduleRepeatingNotification(
-                    activity!!,
-                    notificationId,
-                    intent,
-                    notificationData.delay,
-                    notificationData.interval
-                )
-            } else {
-                scheduleNotification(activity!!, notificationId, intent, notificationData.delay)
-            }
         } else {
-            Log.e(LOG_TAG, "schedule(): invalid notification data object")
+            scheduleNotification(
+                activity = activity,
+                notificationId = notificationData.id,
+                intent = intent,
+                delaySeconds = notificationData.delay,
+            )
         }
     }
 
@@ -130,11 +106,10 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
     @RequiresApi(api = Build.VERSION_CODES.M)
     @UsedByGodot
     fun cancel(notificationId: Int) {
-        cancelNotification(activity!!, notificationId)
-        Log.d(
-            LOG_TAG,
-            "cancel():: notification id: $notificationId"
-        )
+        val activity = activity ?: return
+
+        cancelNotification(activity, notificationId)
+        Log.d(LOG_TAG, "cancel():: notification id: $notificationId")
     }
 
     /**
@@ -144,22 +119,18 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
      */
     @UsedByGodot
     fun get_notification_id(defaultValue: Int): Int {
-        var notificationId = defaultValue
-        val activity = getActivity()
-        if (activity != null) {
-            val intent = getActivity()!!.intent
-            if (intent.hasExtra(NotificationData.Companion.DATA_KEY_ID)) {
-                notificationId =
-                    intent.getIntExtra(NotificationData.Companion.DATA_KEY_ID, defaultValue)
-                Log.i(
-                    LOG_TAG,
-                    "get_notification_id():: intent with notification id: $notificationId"
-                )
-            } else {
-                Log.i(LOG_TAG, "get_notification_id():: notification id not found")
-            }
+        val activity = activity ?: return defaultValue
+
+        val intent = activity.intent
+        // TODO: Can we refactor this to use NotificationData.from(intent)?
+        if (intent.hasExtra(NotificationData.DATA_KEY_ID)) {
+            val notificationId = intent.getIntExtra(NotificationData.Companion.DATA_KEY_ID, defaultValue)
+            Log.i(LOG_TAG, "get_notification_id():: intent with notification id: $notificationId")
+            return notificationId
+        } else {
+            Log.i(LOG_TAG, "get_notification_id():: notification id not found")
+            return defaultValue
         }
-        return notificationId
     }
 
     /**
@@ -167,21 +138,14 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
      */
     @UsedByGodot
     fun has_post_notifications_permission(): Boolean {
-        var result = false
+        val activity = activity ?: return false
+
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S_V2) {
-            if (NotificationManagerCompat.from(activity!!.applicationContext)
-                    .areNotificationsEnabled()
-            ) {
-                result = true
-            }
+            return NotificationManagerCompat.from(activity.applicationContext).areNotificationsEnabled()
         } else {
-            result = true
-            Log.d(
-                LOG_TAG,
-                "has_post_notifications_permission():: API level is " + Build.VERSION.SDK_INT
-            )
+            Log.d(LOG_TAG, "has_post_notifications_permission():: API level is ${Build.VERSION.SDK_INT}")
+            return true
         }
-        return result
     }
 
     /**
@@ -189,23 +153,16 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
      */
     @UsedByGodot
     fun request_post_notifications_permission() {
+        val activity = activity ?: return
+
         try {
             if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S_V2) {
-                ActivityCompat.requestPermissions(
-                    activity!!, arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    POST_NOTIFICATIONS_PERMISSION_REQUEST_CODE
-                )
+                ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), POST_NOTIFICATIONS_PERMISSION_REQUEST_CODE)
             } else {
-                Log.i(
-                    LOG_TAG,
-                    "request_post_notifications_permission():: can't request permission, because SDK version is " + Build.VERSION.SDK_INT
-                )
+                Log.i(LOG_TAG, "request_post_notifications_permission():: can't request permission, because SDK version is ${Build.VERSION.SDK_INT}")
             }
         } catch (e: Exception) {
-            Log.e(
-                LOG_TAG,
-                "request_post_notifications_permission():: Failed to request permission due to " + e.message
-            )
+            Log.e(LOG_TAG, "request_post_notifications_permission():: Failed to request permission", e)
         }
     }
 
@@ -214,16 +171,18 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
      */
     @UsedByGodot
     fun open_app_info_settings() {
+        val activity = activity ?: return
+
         Log.d(LOG_TAG, "open_app_info_settings()")
 
         try {
             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            val uri = Uri.fromParts("package", activity!!.packageName, null)
+            val uri = Uri.fromParts("package", activity.packageName, null)
             intent.setData(uri)
-            activity!!.startActivity(intent)
+            activity.startActivity(intent)
         } catch (e: Exception) {
-            Log.e(LOG_TAG, "open_app_info_settings():: Failed due to " + e.message)
+            Log.e(LOG_TAG, "open_app_info_settings():: Failed", e)
         }
     }
 
@@ -241,7 +200,6 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
     }
 
     override fun onMainCreate(activity: Activity): View? {
-        this.activity = activity
         instance = this
         return super.onMainCreate(activity)
     }
@@ -249,21 +207,12 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
     override fun onGodotSetupCompleted() {
         super.onGodotSetupCompleted()
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S_V2) {
-            val activity = getActivity()
-            if (activity != null) {
-                if (NotificationManagerCompat.from(activity.applicationContext)
-                        .areNotificationsEnabled()
-                ) {
-                    Log.i(
-                        LOG_TAG,
-                        "onGodotSetupCompleted():: POST_NOTIFICATIONS permission has already been granted"
-                    )
-                }
-            } else {
-                Log.e(
-                    LOG_TAG,
-                    "onGodotSetupCompleted():: can't check permission status due to null activity"
-                )
+            val activity = activity ?: run {
+                Log.e(LOG_TAG, "onGodotSetupCompleted():: can't check permission status due to null activity")
+                return
+            }
+            if (NotificationManagerCompat.from(activity.applicationContext).areNotificationsEnabled()) {
+                Log.i(LOG_TAG, "onGodotSetupCompleted():: POST_NOTIFICATIONS permission has already been granted")
             }
         }
     }
@@ -273,52 +222,31 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
         super.onMainDestroy()
     }
 
-    override fun onMainRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
+    override fun onMainRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onMainRequestPermissionsResult(requestCode, permissions, grantResults)
 
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S_V2) {
             if (requestCode == POST_NOTIFICATIONS_PERMISSION_REQUEST_CODE) {
                 // If request is cancelled, the result arrays are empty.
-                if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
                     Log.d(LOG_TAG, "onMainRequestPermissionsResult():: permission request granted")
-                    emitSignal(
-                        godot,
-                        pluginName,
-                        PERMISSION_GRANTED_SIGNAL,
-                        Manifest.permission.POST_NOTIFICATIONS
-                    )
+                    emitSignal(godot, pluginName, PERMISSION_GRANTED_SIGNAL, Manifest.permission.POST_NOTIFICATIONS)
                 } else {
                     Log.d(LOG_TAG, "onMainRequestPermissionsResult():: permission request denied")
-                    emitSignal(
-                        godot,
-                        pluginName, PERMISSION_DENIED_SIGNAL, Manifest.permission.POST_NOTIFICATIONS
-                    )
+                    emitSignal(godot, pluginName, PERMISSION_DENIED_SIGNAL, Manifest.permission.POST_NOTIFICATIONS)
                 }
             }
         } else {
-            Log.e(
-                LOG_TAG,
-                "onMainRequestPermissionsResult():: can't check permission result, because SDK version is " + Build.VERSION.SDK_INT
-            )
+            Log.e(LOG_TAG, "onMainRequestPermissionsResult():: can't check permission result, because SDK version is ${Build.VERSION.SDK_INT}")
         }
     }
 
     fun handleNotificationOpened(notificationId: Int) {
-        emitSignal(
-            godot,
-            pluginName, NOTIFICATION_OPENED_SIGNAL, notificationId
-        )
+        emitSignal(godot, pluginName, NOTIFICATION_OPENED_SIGNAL, notificationId)
     }
 
     fun handleNotificationDismissed(notificationId: Int) {
-        emitSignal(
-            godot,
-            pluginName, NOTIFICATION_DISMISSED_SIGNAL, notificationId
-        )
+        emitSignal(godot, pluginName, NOTIFICATION_DISMISSED_SIGNAL, notificationId)
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -329,54 +257,34 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    private fun scheduleNotification(
-        activity: Activity,
-        notificationId: Int,
-        intent: Intent,
-        delaySeconds: Int
-    ) {
+    private fun scheduleNotification(activity: Activity, notificationId: Int, intent: Intent, delaySeconds: Int) {
         val alarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val timeAfterDelay = calculateTimeAfterDelay(delaySeconds)
         alarmManager[AlarmManager.RTC_WAKEUP, timeAfterDelay] = PendingIntent.getBroadcast(
-            activity.applicationContext, notificationId, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            /* context = */ activity.applicationContext,
+            /* requestCode = */ notificationId,
+            /* intent = */ intent,
+            /* flags = */ PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        Log.i(
-            LOG_TAG,
-            String.format(
-                "Scheduled notification '%d' to be delivered at %d.",
-                notificationId,
-                timeAfterDelay
-            )
-        )
+        Log.i(LOG_TAG, "Scheduled notification '${notificationId}' to be delivered at ${timeAfterDelay}.")
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)
-    private fun scheduleRepeatingNotification(
-        activity: Activity,
-        notificationId: Int,
-        intent: Intent,
-        delaySeconds: Int,
-        intervalSeconds: Int
-    ) {
+    private fun scheduleRepeatingNotification(activity: Activity, notificationId: Int, intent: Intent, delaySeconds: Int, intervalSeconds: Int) {
         val alarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val timeAfterDelay = calculateTimeAfterDelay(delaySeconds)
         alarmManager.setRepeating(
-            AlarmManager.RTC_WAKEUP, timeAfterDelay, intervalSeconds * 1000L,
-            PendingIntent.getBroadcast(
-                activity.applicationContext, notificationId, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            /* type = */ AlarmManager.RTC_WAKEUP,
+            /* triggerAtMillis = */ timeAfterDelay,
+            /* intervalMillis = */ intervalSeconds * 1000L,
+            /* operation = */ PendingIntent.getBroadcast(
+                /* context = */ activity.applicationContext,
+                /* requestCode = */ notificationId,
+                /* intent = */ intent,
+                /* flags = */ PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
         )
-        Log.i(
-            LOG_TAG,
-            String.format(
-                "Scheduled notification '%d' to be delivered at %d with %ds interval.",
-                notificationId,
-                timeAfterDelay,
-                intervalSeconds
-            )
-        )
+        Log.i(LOG_TAG, "Scheduled notification '${notificationId}' to be delivered at ${timeAfterDelay} with ${intervalSeconds}s interval.")
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -388,9 +296,11 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
         val intent = Intent(context, NotificationReceiver::class.java)
         intent.putExtra(NotificationData.Companion.DATA_KEY_ID, notificationId)
         alarmManager.cancel(
-            PendingIntent.getBroadcast(
-                activity.applicationContext, notificationId, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            /* operation = */ PendingIntent.getBroadcast(
+                /* context = */ activity.applicationContext,
+                /* requestCode = */ notificationId,
+                /* intent = */ intent,
+                /* flags = */ PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
         )
 
@@ -399,26 +309,14 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
     }
 
     companion object {
-        private val LOG_TAG = "godot::" + NotificationSchedulerPlugin::class.java.simpleName
+        private val LOG_TAG = "godot::${NotificationSchedulerPlugin::class.java.simpleName}"
 
         var instance: NotificationSchedulerPlugin? = null
 
-        private val PERMISSION_GRANTED_SIGNAL = SignalInfo(
-            "permission_granted",
-            String::class.java
-        )
-        private val PERMISSION_DENIED_SIGNAL = SignalInfo(
-            "permission_denied",
-            String::class.java
-        )
-        private val NOTIFICATION_OPENED_SIGNAL = SignalInfo(
-            "notification_opened",
-            Int::class.java
-        )
-        private val NOTIFICATION_DISMISSED_SIGNAL = SignalInfo(
-            "notification_dismissed",
-            Int::class.java
-        )
+        private val PERMISSION_GRANTED_SIGNAL = SignalInfo("permission_granted", String::class.java)
+        private val PERMISSION_DENIED_SIGNAL = SignalInfo("permission_denied", String::class.java)
+        private val NOTIFICATION_OPENED_SIGNAL = SignalInfo("notification_opened", Int::class.java)
+        private val NOTIFICATION_DISMISSED_SIGNAL = SignalInfo("notification_dismissed", Int::class.java)
 
         private const val POST_NOTIFICATIONS_PERMISSION_REQUEST_CODE = 11803
     }
