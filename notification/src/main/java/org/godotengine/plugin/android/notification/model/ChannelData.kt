@@ -12,10 +12,10 @@ data class ChannelData(
     val importance: Int,
 ) {
     companion object {
-        private const val DATA_KEY_ID = "id"
-        private const val DATA_KEY_NAME = "name"
-        private const val DATA_KEY_DESCRIPTION = "description"
-        private const val DATA_KEY_IMPORTANCE = "importance"
+        const val DATA_KEY_ID = "id"
+        const val DATA_KEY_NAME = "name"
+        const val DATA_KEY_DESCRIPTION = "description"
+        const val DATA_KEY_IMPORTANCE = "importance"
 
         fun from(data: Dictionary): ChannelData {
             val id = data[DATA_KEY_ID] as String
