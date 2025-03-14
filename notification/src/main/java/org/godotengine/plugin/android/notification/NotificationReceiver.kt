@@ -4,7 +4,6 @@
 package org.godotengine.plugin.android.notification
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -24,58 +23,57 @@ class NotificationReceiver : BroadcastReceiver() {
             return
         }
 
-        if (intent.hasExtra(NotificationData.DATA_KEY_ID)) {
-            val notificationData = NotificationData.from(intent)
-            val notificationActionIntent = Intent(context, ResultActivity::class.java).apply {
-                putExtras(intent)
-                setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_HISTORY)
-            }
-            val onCancelIntent = Intent(context, CancelNotificationReceiver::class.java).apply {
-                putExtras(intent)
-            }
-            val onDismissPendingIntent = PendingIntent.getBroadcast(context, 0, onCancelIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-
-            Log.i(LOG_TAG, "onReceive():: received notification id:'${notificationData.id}' - channel id:${notificationData.channelId} - title:'${notificationData.title}' - content:'${notificationData.content}' - small icon name:'${notificationData.smallIconName}")
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val pendingIntent = PendingIntent.getActivity(context, 0, notificationActionIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-
-                val resources = context.resources
-                @SuppressLint("DiscouragedApi") val notificationBuilder =
-                    NotificationCompat.Builder(context, notificationData.channelId)
-                        .setSmallIcon(
-                            resources.getIdentifier(
-                                notificationData.smallIconName,
-                                ICON_RESOURCE_TYPE,
-                                context.packageName
-                            )
-                        ) /* TODO: large icon not working. It needs to be tested again in future versions.
-						.setLargeIcon(BitmapFactory.decodeResource(r, r.getIdentifier(LARGE_ICON_LABEL, LARGE_ICON_RESOURCE_TYPE, context.getPackageName())))
-						.setStyle(new NotificationCompat.BigPictureStyle()
-								.bigPicture(BitmapFactory.decodeResource(r, r.getIdentifier(LARGE_ICON_LABEL, LARGE_ICON_RESOURCE_TYPE, context.getPackageName())))
-								.bigLargeIcon(BitmapFactory.decodeResource(r, r.getIdentifier(LARGE_ICON_LABEL, LARGE_ICON_RESOURCE_TYPE, context.getPackageName()))))
-						 */
-                        .setContentTitle(notificationData.title)
-                        .setContentText(notificationData.content)
-                        .setPriority(NotificationCompat.PRIORITY_DEFAULT) // TODO: This seems suspicious
-                        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                        .setContentIntent(pendingIntent)
-                        .setDeleteIntent(onDismissPendingIntent)
-                        .setAutoCancel(true)
-
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                    ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-                ) {
-                    val notification = notificationBuilder.build()
-                    NotificationManagerCompat.from(context).notify(notificationData.id, notification)
-                } else {
-                    Log.w(LOG_TAG, "onReceive():: unable to process notification as ${Manifest.permission.POST_NOTIFICATIONS} permission is not granted")
-                }
-            } else {
-                Log.w(LOG_TAG, "onReceive():: unable to process notification as current SDK is ${Build.VERSION.SDK_INT} and required SDK is ${Build.VERSION_CODES.M}")
-            }
-        } else {
+        if (!intent.hasExtra(NotificationData.DATA_KEY_ID)) {
             Log.e(LOG_TAG, "onReceive():: ${NotificationData.DATA_KEY_ID} extra not found in intent. Unable to generate notification.")
+            return
+        }
+
+        val notificationData = NotificationData.from(intent)
+        val notificationActionIntent = Intent(context, ResultActivity::class.java).apply {
+            putExtras(intent)
+            setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_HISTORY)
+        }
+        val onCancelIntent = Intent(context, CancelNotificationReceiver::class.java).apply {
+            putExtras(intent)
+        }
+        val onDismissPendingIntent = PendingIntent.getBroadcast(context, 0, onCancelIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+        Log.i(LOG_TAG, "onReceive():: received notification id:'${notificationData.id}' - channel id:${notificationData.channelId} - title:'${notificationData.title}' - content:'${notificationData.content}' - small icon name:'${notificationData.smallIconName}")
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            Log.w(LOG_TAG, "onReceive():: unable to process notification as current SDK is ${Build.VERSION.SDK_INT} and required SDK is ${Build.VERSION_CODES.M}")
+            return
+        }
+
+        val pendingIntent = PendingIntent.getActivity(context, 0, notificationActionIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+        val notificationBuilder = NotificationCompat.Builder(context, notificationData.channelId)
+            .setSmallIcon(
+                context.resources.getIdentifier(
+                    notificationData.smallIconName,
+                    ICON_RESOURCE_TYPE,
+                    context.packageName
+                )
+            )
+            /* TODO: large icon not working. It needs to be tested again in future versions.
+            .setLargeIcon(BitmapFactory.decodeResource(r, r.getIdentifier(LARGE_ICON_LABEL, LARGE_ICON_RESOURCE_TYPE, context.getPackageName())))
+            .setStyle(new NotificationCompat.BigPictureStyle()
+                    .bigPicture(BitmapFactory.decodeResource(r, r.getIdentifier(LARGE_ICON_LABEL, LARGE_ICON_RESOURCE_TYPE, context.getPackageName())))
+                    .bigLargeIcon(BitmapFactory.decodeResource(r, r.getIdentifier(LARGE_ICON_LABEL, LARGE_ICON_RESOURCE_TYPE, context.getPackageName()))))
+             */
+            .setContentTitle(notificationData.title)
+            .setContentText(notificationData.content)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT) // TODO: This seems suspicious
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContentIntent(pendingIntent)
+            .setDeleteIntent(onDismissPendingIntent)
+            .setAutoCancel(true)
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+            val notification = notificationBuilder.build()
+            NotificationManagerCompat.from(context).notify(notificationData.id, notification)
+        } else {
+            Log.w(LOG_TAG, "onReceive():: unable to process notification as ${Manifest.permission.POST_NOTIFICATIONS} permission is not granted")
         }
     }
 
