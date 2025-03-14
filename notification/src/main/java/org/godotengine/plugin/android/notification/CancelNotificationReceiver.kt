@@ -26,6 +26,6 @@ class CancelNotificationReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        private val LOG_TAG = "godot::" + CancelNotificationReceiver::class.java.simpleName
+        private val LOG_TAG = "godot::${CancelNotificationReceiver::class.java.simpleName}"
     }
 }
