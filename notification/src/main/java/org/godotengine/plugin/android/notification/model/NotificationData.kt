@@ -56,7 +56,7 @@ data class NotificationData(
             val smallIconName = intent.getStringExtra(DATA_KEY_SMALL_ICON_NAME) ?: ""
             val delay = intent.getIntExtra(DATA_KEY_DELAY, -1)
             val deeplink = intent.getStringExtra(DATA_KEY_DEEPLINK)
-            val interval = intent.getIntExtra(DATA_KEY_INTERVAL, -1)
+            val interval = intent.getIntExtra(DATA_KEY_INTERVAL, -1).let { if (it == -1) null else it }
             val restartApp = intent.getBooleanExtra(OPTION_KEY_RESTART_APP, false)
 
             return NotificationData(id, channelId, title, content, smallIconName, delay, deeplink, interval, restartApp)

@@ -14,31 +14,33 @@ class ResultActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val thisIntent = intent
-        val godotIntent = Intent(applicationContext, godotAppMainActivityClass)
-        godotIntent.putExtras(thisIntent)
-        val notificationData = NotificationData.from(thisIntent)
+        val notificationData = NotificationData.from(intent)
+        val godotIntent = Intent(applicationContext, godotAppMainActivityClass).apply {
+            putExtras(intent)
 
-        if (notificationData.restartApp != null) {
-            godotIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-        } else {
-            godotIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            Log.i(LOG_TAG, "restartApp: ${notificationData.restartApp}")
+
+            flags = if (notificationData.restartApp) {
+                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            } else {
+                Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+
+            notificationData.deeplink?.let { deeplink ->
+                data = deeplink.toUri()
+            }
         }
 
-        if (godotIntent.hasExtra(NotificationData.DATA_KEY_DEEPLINK)) {
-            godotIntent.setData(godotIntent.getStringExtra(NotificationData.DATA_KEY_DEEPLINK)!!.toUri())
-        }
         Log.i(LOG_TAG, "Starting activity with intent: $godotIntent")
         startActivity(godotIntent)
 
-        val bundle = intent.extras
         val pluginInstance = NotificationSchedulerPlugin.instance
-
-        if (pluginInstance != null && bundle != null && bundle.containsKey(NotificationData.DATA_KEY_ID)) {
+        if (pluginInstance != null && notificationData.id != -1) {
+            Log.e(LOG_TAG, "Handling notification opened. Plugin instance: $pluginInstance, notification ID: ${notificationData.id}")
             // TODO: Handle in Godot app (check data on app resume/restart)
-            pluginInstance.handleNotificationOpened(bundle.getInt(NotificationData.DATA_KEY_ID))
+            pluginInstance.handleNotificationOpened(notificationData.id.toInt())
         } else {
-            Log.w(LOG_TAG, """Ignoring notification. Reason: ${if (NotificationSchedulerPlugin.instance == null) "instance null" else if (bundle == null) "bundle null" else "bundle empty"}""")
+            Log.w(LOG_TAG, "Ignoring notification. Plugin instance: $pluginInstance, notification ID: ${notificationData.id}")
         }
     }
 

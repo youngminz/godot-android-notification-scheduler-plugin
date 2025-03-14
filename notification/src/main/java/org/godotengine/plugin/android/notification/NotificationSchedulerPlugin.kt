@@ -315,8 +315,8 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
 
         private val PERMISSION_GRANTED_SIGNAL = SignalInfo("permission_granted", String::class.java)
         private val PERMISSION_DENIED_SIGNAL = SignalInfo("permission_denied", String::class.java)
-        private val NOTIFICATION_OPENED_SIGNAL = SignalInfo("notification_opened", Int::class.java)
-        private val NOTIFICATION_DISMISSED_SIGNAL = SignalInfo("notification_dismissed", Int::class.java)
+        private val NOTIFICATION_OPENED_SIGNAL = SignalInfo("notification_opened", Integer::class.java)
+        private val NOTIFICATION_DISMISSED_SIGNAL = SignalInfo("notification_dismissed", Integer::class.java)
 
         private const val POST_NOTIFICATIONS_PERMISSION_REQUEST_CODE = 11803
     }

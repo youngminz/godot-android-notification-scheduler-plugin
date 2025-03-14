@@ -25,43 +25,27 @@ class NotificationReceiver : BroadcastReceiver() {
         }
 
         if (intent.hasExtra(NotificationData.DATA_KEY_ID)) {
-            val notificationId = intent.getIntExtra(NotificationData.DATA_KEY_ID, 0)
-            val channelId = intent.getStringExtra(NotificationData.DATA_KEY_CHANNEL_ID)
-            val title = intent.getStringExtra(NotificationData.DATA_KEY_TITLE)
-            val content = intent.getStringExtra(NotificationData.DATA_KEY_CONTENT)
-            val smallIconName = intent.getStringExtra(NotificationData.DATA_KEY_SMALL_ICON_NAME)
-
-            val notificationActionIntent = Intent(context, ResultActivity::class.java)
-            notificationActionIntent.putExtra(NotificationData.DATA_KEY_ID, notificationId)
-
-            if (intent.hasExtra(NotificationData.DATA_KEY_DEEPLINK)) {
-                notificationActionIntent.putExtra(NotificationData.DATA_KEY_DEEPLINK, intent.getStringExtra(NotificationData.DATA_KEY_DEEPLINK))
+            val notificationData = NotificationData.from(intent)
+            val notificationActionIntent = Intent(context, ResultActivity::class.java).apply {
+                putExtras(intent)
+                setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_HISTORY)
             }
-
-            if (intent.hasExtra(NotificationData.OPTION_KEY_RESTART_APP)) {
-                notificationActionIntent.putExtra(NotificationData.OPTION_KEY_RESTART_APP, true)
+            val onCancelIntent = Intent(context, CancelNotificationReceiver::class.java).apply {
+                putExtras(intent)
             }
-
-            notificationActionIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_HISTORY)
-
-            val onCancelIntent = Intent(context, CancelNotificationReceiver::class.java)
-            onCancelIntent.putExtra(NotificationData.DATA_KEY_ID, notificationId)
             val onDismissPendingIntent = PendingIntent.getBroadcast(context, 0, onCancelIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
-            Log.i(LOG_TAG, "onReceive():: received notification id:'${notificationId}' - channel id:${channelId} - title:'${title}' - content:'${content}' - small icon name:'${smallIconName}")
+            Log.i(LOG_TAG, "onReceive():: received notification id:'${notificationData.id}' - channel id:${notificationData.channelId} - title:'${notificationData.title}' - content:'${notificationData.content}' - small icon name:'${notificationData.smallIconName}")
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 val pendingIntent = PendingIntent.getActivity(context, 0, notificationActionIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
                 val resources = context.resources
                 @SuppressLint("DiscouragedApi") val notificationBuilder =
-                    NotificationCompat.Builder(
-                        context,
-                        channelId!!
-                    )
+                    NotificationCompat.Builder(context, notificationData.channelId)
                         .setSmallIcon(
                             resources.getIdentifier(
-                                smallIconName,
+                                notificationData.smallIconName,
                                 ICON_RESOURCE_TYPE,
                                 context.packageName
                             )
@@ -71,9 +55,9 @@ class NotificationReceiver : BroadcastReceiver() {
 								.bigPicture(BitmapFactory.decodeResource(r, r.getIdentifier(LARGE_ICON_LABEL, LARGE_ICON_RESOURCE_TYPE, context.getPackageName())))
 								.bigLargeIcon(BitmapFactory.decodeResource(r, r.getIdentifier(LARGE_ICON_LABEL, LARGE_ICON_RESOURCE_TYPE, context.getPackageName()))))
 						 */
-                        .setContentTitle(title)
-                        .setContentText(content)
-                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                        .setContentTitle(notificationData.title)
+                        .setContentText(notificationData.content)
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT) // TODO: This seems suspicious
                         .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                         .setContentIntent(pendingIntent)
                         .setDeleteIntent(onDismissPendingIntent)
@@ -83,7 +67,7 @@ class NotificationReceiver : BroadcastReceiver() {
                     ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
                 ) {
                     val notification = notificationBuilder.build()
-                    NotificationManagerCompat.from(context).notify(notificationId, notification)
+                    NotificationManagerCompat.from(context).notify(notificationData.id, notification)
                 } else {
                     Log.w(LOG_TAG, "onReceive():: unable to process notification as ${Manifest.permission.POST_NOTIFICATIONS} permission is not granted")
                 }
