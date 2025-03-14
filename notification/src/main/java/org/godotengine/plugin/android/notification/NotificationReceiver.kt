@@ -22,30 +22,28 @@ class NotificationReceiver : BroadcastReceiver() {
             Log.e(LOG_TAG, "onReceive():: Received intent is null. Unable to generate notification.")
             return
         }
-
         if (!intent.hasExtra(NotificationData.DATA_KEY_ID)) {
             Log.e(LOG_TAG, "onReceive():: ${NotificationData.DATA_KEY_ID} extra not found in intent. Unable to generate notification.")
             return
         }
-
-        val notificationData = NotificationData.from(intent)
-        val notificationClickIntent = Intent(context, ResultActivity::class.java).apply {
-            putExtras(intent)
-            setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_HISTORY)
-        }
-        val notificationDismissIntent = Intent(context, CancelNotificationReceiver::class.java).apply {
-            putExtras(intent)
-        }
-        val dismissPendingIntent = PendingIntent.getBroadcast(context, 0, notificationDismissIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-
-        Log.i(LOG_TAG, "onReceive():: received notification id:'${notificationData.id}' - channel id:${notificationData.channelId} - title:'${notificationData.title}' - content:'${notificationData.content}' - small icon name:'${notificationData.smallIconName}")
-
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             Log.w(LOG_TAG, "onReceive():: unable to process notification as current SDK is ${Build.VERSION.SDK_INT} and required SDK is ${Build.VERSION_CODES.M}")
             return
         }
 
+        val notificationData = NotificationData.from(intent)
+        Log.i(LOG_TAG, "onReceive():: received notification id:'${notificationData.id}' - channel id:${notificationData.channelId} - title:'${notificationData.title}' - content:'${notificationData.content}' - small icon name:'${notificationData.smallIconName}")
+
+        val notificationClickIntent = Intent(context, ResultActivity::class.java).apply {
+            putExtras(intent)
+            setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_HISTORY)
+        }
         val clickPendingIntent = PendingIntent.getActivity(context, 0, notificationClickIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+        val notificationDismissIntent = Intent(context, CancelNotificationReceiver::class.java).apply {
+            putExtras(intent)
+        }
+        val dismissPendingIntent = PendingIntent.getBroadcast(context, 0, notificationDismissIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
         val notificationBuilder = NotificationCompat.Builder(context, notificationData.channelId)
             .setSmallIcon(
@@ -79,7 +77,6 @@ class NotificationReceiver : BroadcastReceiver() {
 
     companion object {
         private val LOG_TAG = "godot::${NotificationReceiver::class.java.simpleName}"
-
         private const val ICON_RESOURCE_TYPE = "drawable"
     }
 }

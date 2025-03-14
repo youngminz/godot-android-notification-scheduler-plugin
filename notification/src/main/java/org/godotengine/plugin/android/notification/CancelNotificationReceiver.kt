@@ -13,16 +13,20 @@ class CancelNotificationReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent == null) {
             Log.e(LOG_TAG, "onReceive():: Received intent is null. Unable to generate notification.")
-        } else if (intent.hasExtra(NotificationData.DATA_KEY_ID)) {
-            val notificationId = intent.getIntExtra(NotificationData.DATA_KEY_ID, 0)
-            if (NotificationSchedulerPlugin.instance == null) {
-                Log.e(LOG_TAG, "onReceive():: Plugin instance not found!.")
-            } else {
-                NotificationSchedulerPlugin.instance!!.handleNotificationDismissed(notificationId)
-            }
-        } else {
-            Log.e(LOG_TAG, "onReceive():: ${NotificationData.DATA_KEY_ID} extra not found in intent. Unable to generate notification.")
+            return
         }
+        if (!intent.hasExtra(NotificationData.DATA_KEY_ID)) {
+            Log.e(LOG_TAG, "onReceive():: ${NotificationData.DATA_KEY_ID} extra not found in intent. Unable to generate notification.")
+            return
+        }
+        val pluginInstance = NotificationSchedulerPlugin.instance
+        if (pluginInstance == null) {
+            Log.e(LOG_TAG, "onReceive():: Plugin instance not found!.")
+            return
+        }
+
+        val notificationData = NotificationData.from(intent)
+        pluginInstance.handleNotificationDismissed(notificationData.id)
     }
 
     companion object {

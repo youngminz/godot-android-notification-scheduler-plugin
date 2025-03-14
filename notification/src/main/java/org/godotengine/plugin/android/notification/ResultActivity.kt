@@ -38,7 +38,7 @@ class ResultActivity : AppCompatActivity() {
         if (pluginInstance != null && notificationData.id != -1) {
             Log.e(LOG_TAG, "Handling notification opened. Plugin instance: $pluginInstance, notification ID: ${notificationData.id}")
             // TODO: Handle in Godot app (check data on app resume/restart)
-            pluginInstance.handleNotificationOpened(notificationData.id.toInt())
+            pluginInstance.handleNotificationOpened(notificationData.id)
         } else {
             Log.w(LOG_TAG, "Ignoring notification. Plugin instance: $pluginInstance, notification ID: ${notificationData.id}")
         }
