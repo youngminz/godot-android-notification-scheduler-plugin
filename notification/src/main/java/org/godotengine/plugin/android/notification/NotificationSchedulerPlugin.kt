@@ -294,7 +294,7 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
         // cancel alarm
         val alarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, NotificationReceiver::class.java)
-        intent.putExtra(NotificationData.Companion.DATA_KEY_ID, notificationId)
+        intent.putExtra(NotificationData.DATA_KEY_ID, notificationId)
         alarmManager.cancel(
             /* operation = */ PendingIntent.getBroadcast(
                 /* context = */ activity.applicationContext,
