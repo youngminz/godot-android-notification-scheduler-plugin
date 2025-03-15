@@ -201,7 +201,6 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
 
     override fun onMainCreate(activity: Activity): View? {
         INSTANCE = this
-        IS_FOREGROUND = true
         return super.onMainCreate(activity)
     }
 
@@ -220,20 +219,7 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
 
     override fun onMainDestroy() {
         INSTANCE = null
-        IS_FOREGROUND = false
         super.onMainDestroy()
-    }
-
-    override fun onMainResume() {
-        super.onMainResume()
-        IS_FOREGROUND = true
-        Log.d(LOG_TAG, "onMainResume(): App is now in foreground")
-    }
-
-    override fun onMainPause() {
-        super.onMainPause()
-        IS_FOREGROUND = false
-        Log.d(LOG_TAG, "onMainPause(): App is now in background")
     }
 
     override fun onMainRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
@@ -334,7 +320,6 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
         private val LOG_TAG = "godot::${NotificationSchedulerPlugin::class.java.simpleName}"
 
         var INSTANCE: NotificationSchedulerPlugin? = null
-        var IS_FOREGROUND = false
 
         private val PERMISSION_GRANTED_SIGNAL = SignalInfo("permission_granted", String::class.java)
         private val PERMISSION_DENIED_SIGNAL = SignalInfo("permission_denied", String::class.java)
