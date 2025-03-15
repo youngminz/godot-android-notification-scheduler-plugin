@@ -19,7 +19,7 @@ class CancelNotificationReceiver : BroadcastReceiver() {
             Log.e(LOG_TAG, "onReceive():: ${NotificationData.DATA_KEY_ID} extra not found in intent. Unable to generate notification.")
             return
         }
-        val pluginInstance = NotificationSchedulerPlugin.instance
+        val pluginInstance = NotificationSchedulerPlugin.INSTANCE
         if (pluginInstance == null) {
             Log.e(LOG_TAG, "onReceive():: Plugin instance not found!.")
             return

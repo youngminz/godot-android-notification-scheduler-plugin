@@ -34,7 +34,7 @@ class ResultActivity : AppCompatActivity() {
         Log.i(LOG_TAG, "Starting activity with intent: $godotIntent")
         startActivity(godotIntent)
 
-        val pluginInstance = NotificationSchedulerPlugin.instance
+        val pluginInstance = NotificationSchedulerPlugin.INSTANCE
         if (pluginInstance != null && notificationData.id != -1) {
             // TODO: Handle in Godot app (check data on app resume/restart)
             pluginInstance.handleNotificationOpened(notificationData.id)

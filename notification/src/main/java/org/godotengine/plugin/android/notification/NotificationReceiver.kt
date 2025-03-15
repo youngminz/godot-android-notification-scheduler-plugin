@@ -30,6 +30,10 @@ class NotificationReceiver : BroadcastReceiver() {
             Log.w(LOG_TAG, "onReceive():: unable to process notification as current SDK is ${Build.VERSION.SDK_INT} and required SDK is ${Build.VERSION_CODES.M}")
             return
         }
+        if (NotificationSchedulerPlugin.IS_FOREGROUND) {
+            Log.w(LOG_TAG, "onReceive():: not generating notification as app is in foreground!")
+            return
+        }
 
         val notificationData = NotificationData.from(intent)
         Log.i(LOG_TAG, "onReceive():: received notification id:'${notificationData.id}' - channel id:${notificationData.channelId} - title:'${notificationData.title}' - content:'${notificationData.content}' - small icon name:'${notificationData.smallIconName}")
@@ -61,7 +65,7 @@ class NotificationReceiver : BroadcastReceiver() {
              */
             .setContentTitle(notificationData.title)
             .setContentText(notificationData.content)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT) // TODO: This seems suspicious
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(clickPendingIntent)
             .setDeleteIntent(dismissPendingIntent)
