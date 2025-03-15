@@ -259,11 +259,16 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
     private fun scheduleNotification(activity: Activity, notificationId: Int, intent: Intent, delaySeconds: Int) {
         val alarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val timeAfterDelay = calculateTimeAfterDelay(delaySeconds)
-        alarmManager[AlarmManager.RTC_WAKEUP, timeAfterDelay] = PendingIntent.getBroadcast(
+        val operation = PendingIntent.getBroadcast(
             /* context = */ activity.applicationContext,
             /* requestCode = */ notificationId,
             /* intent = */ intent,
             /* flags = */ PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        alarmManager.set(
+            /* type = */ AlarmManager.RTC_WAKEUP,
+            /* triggerAtMillis = */ timeAfterDelay,
+            /* operation = */ operation,
         )
         Log.i(LOG_TAG, "Scheduled notification '${notificationId}' to be delivered at ${timeAfterDelay}.")
     }
@@ -272,16 +277,17 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
     private fun scheduleRepeatingNotification(activity: Activity, notificationId: Int, intent: Intent, delaySeconds: Int, intervalSeconds: Int) {
         val alarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val timeAfterDelay = calculateTimeAfterDelay(delaySeconds)
+        val operation = PendingIntent.getBroadcast(
+            /* context = */ activity.applicationContext,
+            /* requestCode = */ notificationId,
+            /* intent = */ intent,
+            /* flags = */ PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
         alarmManager.setRepeating(
             /* type = */ AlarmManager.RTC_WAKEUP,
             /* triggerAtMillis = */ timeAfterDelay,
             /* intervalMillis = */ intervalSeconds * 1000L,
-            /* operation = */ PendingIntent.getBroadcast(
-                /* context = */ activity.applicationContext,
-                /* requestCode = */ notificationId,
-                /* intent = */ intent,
-                /* flags = */ PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
+            /* operation = */ operation,
         )
         Log.i(LOG_TAG, "Scheduled notification '${notificationId}' to be delivered at $timeAfterDelay with ${intervalSeconds}s interval.")
     }
@@ -294,13 +300,14 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
         val alarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, NotificationReceiver::class.java)
         intent.putExtra(NotificationData.DATA_KEY_ID, notificationId)
+        val operation = PendingIntent.getBroadcast(
+            /* context = */ activity.applicationContext,
+            /* requestCode = */ notificationId,
+            /* intent = */ intent,
+            /* flags = */ PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
         alarmManager.cancel(
-            /* operation = */ PendingIntent.getBroadcast(
-                /* context = */ activity.applicationContext,
-                /* requestCode = */ notificationId,
-                /* intent = */ intent,
-                /* flags = */ PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
+            /* operation = */ operation,
         )
 
         // cancel notification
