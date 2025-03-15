@@ -122,9 +122,8 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
         val activity = activity ?: return defaultValue
 
         val intent = activity.intent
-        // TODO: Can we refactor this to use NotificationData.from(intent)?
         if (intent.hasExtra(NotificationData.DATA_KEY_ID)) {
-            val notificationId = intent.getIntExtra(NotificationData.Companion.DATA_KEY_ID, defaultValue)
+            val notificationId = intent.getIntExtra(NotificationData.DATA_KEY_ID, defaultValue)
             Log.i(LOG_TAG, "get_notification_id():: intent with notification id: $notificationId")
             return notificationId
         } else {
@@ -284,7 +283,7 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
                 /* flags = */ PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
         )
-        Log.i(LOG_TAG, "Scheduled notification '${notificationId}' to be delivered at ${timeAfterDelay} with ${intervalSeconds}s interval.")
+        Log.i(LOG_TAG, "Scheduled notification '${notificationId}' to be delivered at $timeAfterDelay with ${intervalSeconds}s interval.")
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
