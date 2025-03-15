@@ -21,6 +21,7 @@ import android.view.View
 import androidx.annotation.RequiresApi
 import androidx.collection.ArraySet
 import androidx.core.app.ActivityCompat
+import androidx.core.app.AlarmManagerCompat
 import androidx.core.app.NotificationManagerCompat
 import org.godotengine.godot.Dictionary
 import org.godotengine.godot.Godot
@@ -265,7 +266,8 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
             /* intent = */ intent,
             /* flags = */ PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        alarmManager.set(
+        AlarmManagerCompat.setAndAllowWhileIdle(
+            /* alarmManager = */ alarmManager,
             /* type = */ AlarmManager.RTC_WAKEUP,
             /* triggerAtMillis = */ timeAfterDelay,
             /* operation = */ operation,
@@ -283,7 +285,7 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
             /* intent = */ intent,
             /* flags = */ PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        alarmManager.setRepeating(
+        alarmManager.setInexactRepeating(
             /* type = */ AlarmManager.RTC_WAKEUP,
             /* triggerAtMillis = */ timeAfterDelay,
             /* intervalMillis = */ intervalSeconds * 1000L,
