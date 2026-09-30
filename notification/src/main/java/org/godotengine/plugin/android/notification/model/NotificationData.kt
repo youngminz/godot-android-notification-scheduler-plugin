@@ -34,15 +34,17 @@ data class NotificationData(
         const val DATA_KEY_INTERVAL: String = "interval"
         const val OPTION_KEY_RESTART_APP: String = "restart_app"
 
+        // Godot passes Variant INT (int64) values in a Dictionary as java.lang.Long, so read
+        // integers as Number instead of casting to Int.
         fun from(data: Dictionary): NotificationData {
-            val id = data[DATA_KEY_ID] as Int
+            val id = (data[DATA_KEY_ID] as Number).toInt()
             val channelId = data[DATA_KEY_CHANNEL_ID] as String
             val title = data[DATA_KEY_TITLE] as String
             val content = data[DATA_KEY_CONTENT] as String
             val smallIconName = data[DATA_KEY_SMALL_ICON_NAME] as String
-            val delay = data[DATA_KEY_DELAY] as Int
+            val delay = (data[DATA_KEY_DELAY] as Number).toInt()
             val deeplink = data[DATA_KEY_DEEPLINK] as? String
-            val interval = data[DATA_KEY_INTERVAL] as? Int
+            val interval = (data[DATA_KEY_INTERVAL] as? Number)?.toInt()
             val restartApp = data[OPTION_KEY_RESTART_APP] as? Boolean ?: false
 
             return NotificationData(id, channelId, title, content, smallIconName, delay, deeplink, interval, restartApp)

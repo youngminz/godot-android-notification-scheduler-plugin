@@ -199,7 +199,7 @@ class NotificationSchedulerPlugin(godot: Godot?) : GodotPlugin(godot) {
         return signals
     }
 
-    override fun onMainCreate(activity: Activity): View? {
+    override fun onMainCreate(activity: Activity?): View? {
         INSTANCE = this
         return super.onMainCreate(activity)
     }

@@ -21,7 +21,7 @@ data class ChannelData(
             val id = data[DATA_KEY_ID] as String
             val name = data[DATA_KEY_NAME] as String
             val description = data[DATA_KEY_DESCRIPTION] as String
-            val importance = data[DATA_KEY_IMPORTANCE] as Int
+            val importance = (data[DATA_KEY_IMPORTANCE] as Number).toInt()
 
             return ChannelData(id, name, description, importance)
         }
